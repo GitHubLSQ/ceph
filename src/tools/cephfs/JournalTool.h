@@ -38,6 +38,7 @@ class JournalTool : public MDSUtility
     int main_journal(std::vector<const char*> &argv);
     int main_header(std::vector<const char*> &argv);
     int main_event(std::vector<const char*> &argv);
+    int main_table(std::vector<const char*> &argv);
 
     // Shared functionality
     int recover_journal();

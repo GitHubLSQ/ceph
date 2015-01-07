@@ -40,6 +40,7 @@ void JournalTool::usage()
   std::cout << "Usage: \n"
     << "  cephfs-journal-tool [options] journal [inspect|import|export|reset]\n"
     << "  cephfs-journal-tool [options] header <get|set <field> <value>\n"
+    << "  cephfs-journal-tool [options] table reset <session|ino|snap>\n"
     << "  cephfs-journal-tool [options] event <effect> <selector> <output>\n"
     << "    <selector>:\n"
     << "      --range=<start>..<end>\n"
@@ -48,7 +49,7 @@ void JournalTool::usage()
     << "      --type=<UPDATE|OPEN|SESSION...><\n"
     << "      --frag=<ino>.<frag> [--dname=<dentry string>]\n"
     << "      --client=<session id integer>\n"
-    << "    <effect>: [get|apply|recover_dentries|reset_sessiontable|splice]\n"
+    << "    <effect>: [get|apply|recover_dentries|splice]\n"
     << "    <output>: [summary|binary|json] [--path <path>]\n"
     << "\n"
     << "Options:\n"
@@ -125,6 +126,8 @@ int JournalTool::main(std::vector<const char*> &argv)
     return main_header(argv);
   } else if (mode == std::string("event")) {
     return main_event(argv);
+  } else if (mode == std::string("table")) {
+    return main_table(argv);
   } else {
     derr << "Bad command '" << mode << "'" << dendl;
     usage();
@@ -251,6 +254,28 @@ int JournalTool::main_header(std::vector<const char*> &argv)
 }
 
 
+int JournalTool::main_table(std::vector<const char*> &argv)
+{
+  std::vector<const char*>::iterator arg = argv.begin();
+
+  const std::string command = *(arg++);
+  if (command != "reset") {
+    derr << "Unknown command '" << command << "'" << dendl;
+    usage();
+    return -EINVAL;
+  }
+
+  const std::string table = *(arg++);
+  if (table == "session") {
+    return reset_session_table();
+  } else {
+    derr << "Unknown table '" << table << "'" << dendl;
+    usage();
+    return -EINVAL;
+  }
+}
+
+
 /**
  * Parse arguments and execute for 'event' mode
  *
@@ -263,7 +288,7 @@ int JournalTool::main_event(std::vector<const char*> &argv)
   std::vector<const char*>::iterator arg = argv.begin();
 
   std::string command = *(arg++);
-  if (command != "get" && command != "apply" && command != "splice" && command != "recover_dentries" && command != "reset_sessiontable") {
+  if (command != "get" && command != "apply" && command != "splice" && command != "recover_dentries") {
     derr << "Unknown argument '" << command << "'" << dendl;
     usage();
     return -EINVAL;
@@ -382,8 +407,6 @@ int JournalTool::main_event(std::vector<const char*> &argv)
         }
       }
     }
-  } else if (command == "reset_sessiontable") {
-    r = reset_session_table();
   } else if (command == "splice") {
     r = js.scan();
     if (r) {
